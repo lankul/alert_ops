@@ -1,0 +1,58 @@
+mysql:
+  host: "localhost"
+  port: 3306
+  user: "root"
+  password: "zhoujing"
+  dbname: "alert_db"
+
+webhooks:
+  - job: "苍穹_生产环境"
+    im_url: "https://th.wens.com.cn/gateway/robot/webhook/send?yzjtype=0&yzjtoken=aef33d08367043e794b889a4c36d5c6f"
+    voice_url: "https://paas.wens.com.cn/o/tonghumsg/api/create_alert/"
+    voice_silence_rules:
+      - not_match:
+          instance: "10.10.6."  # 取反匹配：instance 不包含 "10.10.6."
+          time_range:
+            start: "00:00"
+            end: "06:00"
+      - match:
+          alertname: "CPU使用率"
+          time_range:
+            start: "22:00"
+            end: "06:00"
+      - match:
+          summary: "网络带宽使用率过高"
+          time_range:
+            days: [ "Saturday", "Sunday" ]  # 周六和周日全天静默
+  - job: "大数据_生产环境"
+    im_url: "https://th.wens.com.cn/gateway/robot/webhook/send?yzjtype=0&yzjtoken=aef33d08367043e794b889a4c36d5c6f"
+    voice_url: "https://paas.wens.com.cn/o/tonghumsg/api/create_alert/"
+    voice_silence_rules:
+      - match:
+          summary: "agent连接超时"
+
+notice_person:
+  default:
+    苍穹_生产环境: ["周靖", "秦成平"]
+    大数据_生产环境: ["周靖", "秦成平"]
+  custom:
+    - match:
+        instance: "10.10.6."
+      notice_person: ["孟文兵", "周靖"]
+    - match:
+        job: "苍穹_生产环境"
+        summary: "孟文兵"
+      notice_person: ["孟文兵", "周靖"]
+
+self_heal:
+  - match:
+      job: "苍穹_生产环境"
+      severity: "1.5"
+      alertname: "苍穹实例不可用"
+      summary: "oom"
+    action: "restart_cq_pod.sh"
+    delay: "5m"
+  - match:
+      alertname: "DiskSpaceLow"
+      job: "job2"
+    action: "cleanup_disk.sh"
